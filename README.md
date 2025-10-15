@@ -5,14 +5,14 @@ Built using OpenAI’s GPT technology, this bot can understand natural language,
 
 Featuring:
 
-# 🧠 Advanced AI comprehension – understands and responds intelligently to any topic.
+🧠 Advanced AI comprehension – understands and responds intelligently to any topic.
 
-# 💬 Beautiful chat interface – clean, modern, and mobile-friendly design.
+💬 Beautiful chat interface – clean, modern, and mobile-friendly design.
 
-# 🤖 Custom bot icon – visually appealing AI avatar for a personal touch.
+🤖 Custom bot icon – visually appealing AI avatar for a personal touch.
 
-# 🔍 Smart scroll controls – easily navigate long conversations.
+🔍 Smart scroll controls – easily navigate long conversations.
 
-# 💡 Developer-friendly – easily connects to OpenAI’s GPT API for real-time responses.
+💡 Developer-friendly – easily connects to OpenAI’s GPT API for real-time responses.
 
 Whether you need quick answers, brainstorming help, or code assistance, this AI chatbot is your always-available, always-learning digital companion.
