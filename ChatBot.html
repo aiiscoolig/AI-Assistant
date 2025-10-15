@@ -1,242 +1,736 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>AI Chatbot with Custom Icon</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>BlueBot — AI Chat Demo (Dark/Light + Auth + Persistence)</title>
 <style>
-  body {
-    font-family: "Inter", sans-serif;
-    background: #eef2f7;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    margin: 0;
+  :root{
+    --bg: #eef2f7;
+    --card: #ffffff;
+    --text: #0b1220;
+    --muted: #6b7280;
+    --accent-1: #0078ff;
+    --accent-2: #339dff;
+    --bot-bg: #f1f3f5;
+    --user-gradient: linear-gradient(135deg,var(--accent-1),var(--accent-2));
+    --radius: 12px;
+  }
+  [data-theme="dark"]{
+    --bg: #0b1220;
+    --card: #07101a;
+    --text: #e6eef8;
+    --muted: #9aa8bf;
+    --accent-1: #1e90ff;
+    --accent-2: #4fb0ff;
+    --bot-bg: #0f1720;
   }
 
-  .chat-container {
-    width: 450px;
-    height: 600px;
-    background: #fff;
-    border-radius: 16px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    background:var(--bg);
+    color:var(--text);
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:28px;
   }
 
-  .chat-box {
-    flex: 1;
-    overflow-y: auto;
-    padding: 16px;
-    scroll-behavior: smooth;
+  /* Page frame */
+  .site {
+    width:100%;
+    max-width:1100px;
+    height:85vh;
+    border-radius:16px;
+    overflow:hidden;
+    display:grid;
+    grid-template-columns:260px 1fr;
+    box-shadow: 0 10px 40px rgba(2,6,23,0.35);
+    background:linear-gradient(180deg, rgba(255,255,255,0.03), rgba(0,0,0,0.02));
   }
 
-  .msg {
-    margin: 10px 0;
-    padding: 10px 14px;
-    border-radius: 12px;
-    max-width: 80%;
-    word-wrap: break-word;
-    display: flex;
-    align-items: flex-start;
-    gap: 8px;
+  /* Sidebar */
+  .sidebar{
+    background:var(--card);
+    padding:18px;
+    border-right:1px solid rgba(0,0,0,0.04);
+    display:flex;flex-direction:column;gap:12px;
+  }
+  .brand{
+    display:flex;gap:10px;align-items:center;
+  }
+  .logo{
+    width:44px;height:44px;border-radius:10px;
+    background:linear-gradient(135deg,var(--accent-1),var(--accent-2));
+    display:flex;align-items:center;justify-content:center;color:white;font-weight:700;
+    box-shadow: 0 4px 14px rgba(3, 102, 255, 0.15);
+  }
+  .brand h1{font-size:16px;margin:0}
+  .nav{
+    display:flex;flex-direction:column;margin-top:8px;gap:6px;
+  }
+  .nav a{
+    padding:10px;border-radius:10px;color:var(--text);text-decoration:none;font-weight:600;
+    display:flex;gap:8px;align-items:center;
+  }
+  .nav a.active{background:linear-gradient(90deg, rgba(0,120,255,0.1), rgba(51,157,255,0.06));}
+
+  .user-mini{
+    margin-top:auto;display:flex;gap:10px;align-items:center;padding-top:8px;border-top:1px solid rgba(0,0,0,0.04);
+  }
+  .avatar{
+    width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,var(--accent-1),var(--accent-2));
+    display:flex;align-items:center;justify-content:center;color:white;font-weight:700;
+  }
+  .small-muted{color:var(--muted);font-size:13px}
+
+  /* Main content */
+  .content{
+    display:flex;flex-direction:column;height:100%;
+    background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.02));
+    padding:14px;
+  }
+  .topbar{
+    display:flex;align-items:center;justify-content:space-between;padding:8px 12px;margin-bottom:8px;
+  }
+  .page-title{font-weight:700}
+  .controls{display:flex;gap:10px;align-items:center}
+
+  .theme-toggle{
+    padding:8px;border-radius:8px;background:var(--card);border:1px solid rgba(0,0,0,0.04);cursor:pointer;
   }
 
-  .user {
-    background: linear-gradient(135deg, #0078ff, #339dff);
-    color: white;
-    align-self: flex-end;
-    justify-content: flex-end;
+  /* Pages (views) */
+  .view{display:none;height:100%}
+  .view.active{display:block;height:100%}
+
+  /* Chat layout */
+  .chat-layout{
+    display:grid;grid-template-columns:300px 1fr;gap:12px;height:calc(100% - 56px);
+  }
+  .conversations{
+    background:var(--card);padding:12px;border-radius:12px;overflow-y:auto;
+  }
+  .conv-item{padding:10px;border-radius:10px;margin-bottom:8px;cursor:pointer}
+  .conv-item.active{background: linear-gradient(90deg, rgba(0,120,255,0.07), rgba(51,157,255,0.05));}
+
+  .chat-panel{
+    background:var(--card);padding:12px;border-radius:12px;display:flex;flex-direction:column;height:100%;
+  }
+  .chat-box{
+    flex:1;overflow-y:auto;padding:12px;border-radius:8px;background:transparent;
+  }
+  .msg{display:flex;gap:10px;margin-bottom:10px;align-items:flex-start}
+  .msg.bot{justify-content:flex-start}
+  .msg.user{justify-content:flex-end}
+  .msg .bubble{padding:10px;border-radius:10px;max-width:78%;line-height:1.45}
+  .msg.bot .bubble{background:var(--bot-bg);color:var(--text)}
+  .msg.user .bubble{background:var(--user-gradient);color:white}
+
+  .msg.bot img{width:34px;height:34px;border-radius:8px;object-fit:cover;box-shadow:0 2px 8px rgba(0,0,0,0.12)}
+  .msg .bubble pre{margin:0}
+
+  /* modern blue code box inside bubble */
+  pre.code{
+    background: linear-gradient(135deg,var(--accent-1),var(--accent-2));
+    color: #fff;padding:10px;border-radius:8px;overflow:auto;font-family: "Fira Code", monospace;
+    box-shadow: 0 6px 20px rgba(3, 102, 255, 0.12);
   }
 
-  .bot {
-    background: #f1f3f5;
-    align-self: flex-start;
-    justify-content: flex-start;
-  }
+  .chat-controls{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+  .scroll-buttons{display:flex;gap:8px;justify-content:center}
+  .scroll-buttons button,.send-btn{background:var(--accent-1);color:#fff;border:none;padding:8px 12px;border-radius:8px;cursor:pointer}
+  .send-row{display:flex;gap:8px;align-items:center}
+  .send-row input{flex:1;padding:10px;border-radius:8px;border:1px solid rgba(0,0,0,0.06);background:transparent;color:var(--text)}
+  .small{font-size:13px;color:var(--muted)}
 
-  .bot img {
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    object-fit: cover;
-    margin-top: 2px;
-    box-shadow: 0 0 4px rgba(0,0,0,0.2);
+  /* Forms and about */
+  .card{background:var(--card);padding:18px;border-radius:12px;box-shadow:none}
+  label{display:block;font-weight:600;margin-bottom:6px}
+  input[type="text"],input[type="email"],input[type="password"],textarea{
+    width:100%;padding:10px;border-radius:8px;border:1px solid rgba(0,0,0,0.06);background:transparent;color:var(--text)
   }
+  .form-row{display:flex;gap:10px}
+  .muted{color:var(--muted);font-size:13px;margin-top:6px}
+  .danger{color:#ff4d4f}
 
-  .msg-content {
-    max-width: calc(100% - 36px);
-  }
+  footer{font-size:13px;color:var(--muted);text-align:center;margin-top:8px}
 
-  pre {
-    background: linear-gradient(135deg, #0078ff, #339dff);
-    color: #ffffff;
-    padding: 12px;
-    border-radius: 10px;
-    overflow-x: auto;
-    margin-top: 8px;
-    font-size: 0.9rem;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-  }
-
-  code {
-    font-family: "Fira Code", "Courier New", monospace;
-    white-space: pre-wrap;
-  }
-
-  .scroll-buttons {
-    display: flex;
-    justify-content: center;
-    gap: 8px;
-    padding: 8px;
-    border-top: 1px solid #ddd;
-    border-bottom: 1px solid #ddd;
-    background: #f9fafb;
-  }
-
-  .scroll-btn {
-    background: #0078ff;
-    color: #fff;
-    border: none;
-    border-radius: 6px;
-    width: 40px;
-    height: 32px;
-    cursor: pointer;
-    font-size: 16px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-    transition: all 0.2s ease;
-  }
-
-  .scroll-btn:hover {
-    background: #005ecc;
-    transform: translateY(-1px);
-  }
-
-  .input-area {
-    display: flex;
-    border-top: 1px solid #ddd;
-  }
-
-  .input-area input {
-    flex: 1;
-    padding: 12px;
-    border: none;
-    outline: none;
-    font-size: 15px;
-  }
-
-  .input-area button {
-    background: #0078ff;
-    color: white;
-    border: none;
-    padding: 0 20px;
-    cursor: pointer;
-    font-weight: 600;
-    transition: background 0.2s;
-  }
-
-  .input-area button:hover {
-    background: #005ecc;
+  /* responsive */
+  @media (max-width:900px){
+    .site{grid-template-columns:1fr;max-width:680px;height:92vh}
+    .chat-layout{grid-template-columns:1fr}
+    .sidebar{display:flex;flex-direction:row;gap:12px;align-items:center;padding:12px}
+    .user-mini{display:none}
   }
 </style>
 </head>
 <body>
-  <div class="chat-container">
-    <div class="chat-box" id="chatBox">
-      <div class="msg bot">
-        <img src="https://static.vecteezy.com/system/resources/thumbnails/050/700/554/small_2x/chatbot-icon-concept-chat-bot-or-chatterbot-robot-virtual-assistance-of-website-or-mobile-applications-illustration-png.png" alt="Bot">
-        <div class="msg-content">Hi! I’m your AI assistant. How can I help?</div>
+<div class="site" id="app" data-theme="dark">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logo">B</div>
+      <div>
+        <h1>BlueBot</h1>
+        <div class="small-muted">AI chat demo</div>
       </div>
     </div>
 
-    <div class="scroll-buttons">
-      <button class="scroll-btn" onclick="scrollToTop()">↑</button>
-      <button class="scroll-btn" onclick="scrollToBottom()">↓</button>
+    <nav class="nav" id="nav">
+      <a href="#/chat" data-route="chat" class="active">Chat</a>
+      <a href="#/about" data-route="about">About</a>
+      <a href="#/signup" data-route="signup">Sign Up</a>
+      <a href="#/signin" data-route="signin">Sign In</a>
+      <a href="#/settings" data-route="settings">Settings</a>
+    </nav>
+
+    <div class="user-mini" id="userMini">
+      <div class="avatar" id="avatarInitial">U</div>
+      <div>
+        <div id="miniName">Not signed in</div>
+        <div class="small-muted" id="miniEmail"></div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="content">
+    <div class="topbar">
+      <div class="page-title" id="pageTitle">Chat</div>
+      <div class="controls">
+        <div class="small-muted" id="greeting">Welcome</div>
+        <button class="theme-toggle" id="themeToggle">Toggle Theme</button>
+      </div>
     </div>
 
-    <div class="input-area">
-      <input type="text" id="userInput" placeholder="Type a message..." />
-      <button id="sendBtn">Send</button>
-    </div>
-  </div>
+    <!-- Chat view -->
+    <section id="view-chat" class="view active">
+      <div class="chat-layout">
+        <div class="conversations card" id="conversationsList">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+            <strong>Conversations</strong>
+            <button id="newConvBtn" class="send-btn" style="background:transparent;color:var(--accent-1);border:1px solid rgba(0,0,0,0.06);">New</button>
+          </div>
+          <div id="convs"></div>
+        </div>
+
+        <div class="chat-panel">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+            <div style="display:flex;flex-direction:column">
+              <div class="small-muted">Active chat</div>
+              <strong id="activeConvTitle">No conversation</strong>
+            </div>
+          </div>
+
+          <div class="chat-box" id="chatBox">
+            <!-- messages -->
+          </div>
+
+          <div class="chat-controls">
+            <div class="scroll-buttons">
+              <button onclick="scrollToTop()" title="Scroll to top">↑</button>
+              <button onclick="scrollToBottom()" title="Scroll to bottom">↓</button>
+            </div>
+
+            <div class="send-row">
+              <input id="userInput" placeholder="Ask BlueBot something..." />
+              <button id="sendBtn" class="send-btn">Send</button>
+            </div>
+
+            <div class="small muted">Backend: <span id="backendUrlDisplay">(not configured)</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- About view -->
+    <section id="view-about" class="view">
+      <div class="card">
+        <h2>About BlueBot</h2>
+        <p class="muted">BlueBot is a demo AI chat interface that shows a modern chat UI, sign up / sign in, and local persistence. It is intended for learning and prototyping. To connect to real OpenAI responses, configure a server proxy URL in Settings.</p>
+        <ul>
+          <li>Dark / Light themes</li>
+          <li>Code block formatting</li>
+          <li>Sign up & sign in (client-side demo)</li>
+          <li>Persistent chats per user</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- Signup -->
+    <section id="view-signup" class="view">
+      <div class="card" style="max-width:560px">
+        <h2>Create an account</h2>
+        <div id="signupMsg" class="muted"></div>
+        <div style="display:grid;gap:10px;margin-top:8px">
+          <label>Username</label><input id="su_username" type="text" />
+          <label>Email</label><input id="su_email" type="email" />
+          <label>Display name</label><input id="su_display" type="text" />
+          <label>Password</label><input id="su_password" type="password" />
+          <label>Confirm password</label><input id="su_password2" type="password" />
+          <label>Bio (optional)</label><textarea id="su_bio" rows="3"></textarea>
+          <div style="display:flex;gap:8px">
+            <button id="signupBtn" class="send-btn">Sign Up</button>
+            <button id="toSignin" style="background:transparent;border:none;cursor:pointer;color:var(--accent-1)">Already have an account?</button>
+          </div>
+          <div id="signupNote" class="muted">Passwords are hashed in the browser (demo only).</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Signin -->
+    <section id="view-signin" class="view">
+      <div class="card" style="max-width:560px">
+        <h2>Sign in</h2>
+        <div id="signinMsg" class="muted"></div>
+        <div style="display:grid;gap:10px;margin-top:8px">
+          <label>Username or email</label><input id="si_user" type="text" />
+          <label>Password</label><input id="si_pass" type="password" />
+          <div style="display:flex;gap:8px">
+            <button id="signinBtn" class="send-btn">Sign In</button>
+            <button id="toSignup" style="background:transparent;border:none;cursor:pointer;color:var(--accent-1)">Create account</button>
+          </div>
+          <div id="signinNote" class="muted"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Settings -->
+    <section id="view-settings" class="view">
+      <div class="card" style="max-width:720px">
+        <h2>Settings</h2>
+        <div style="display:grid;gap:10px">
+          <label>Theme</label>
+          <div style="display:flex;gap:8px">
+            <button id="setLight" style="padding:8px;border-radius:8px">Light</button>
+            <button id="setDark" style="padding:8px;border-radius:8px">Dark</button>
+          </div>
+
+          <label>Backend proxy URL (optional)</label>
+          <input id="backendUrl" placeholder="e.g. http://localhost:3000/chat" />
+          <div class="muted">If set, the client will POST messages as { messages: [{role:'user', content: '...' }] } to this URL and expect the OpenAI chat-completions response JSON. Do not paste your secret API key here if you don't trust the environment.</div>
+
+          <label>Clear data</label>
+          <div style="display:flex;gap:8px">
+            <button id="clearAll" class="danger" style="background:#ff4d4f;color:#fff;padding:8px;border-radius:8px">Clear all local data</button>
+            <button id="exportData" style="padding:8px;border-radius:8px">Export JSON</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer><span id="footerInfo">BlueBot demo</span></footer>
+  </main>
+</div>
 
 <script>
-const chatBox = document.getElementById("chatBox");
-const userInput = document.getElementById("userInput");
-const sendBtn = document.getElementById("sendBtn");
+/*
+ BlueBot SPA — all client-side.
+ - Users stored in localStorage 'bb_users' as array of user objects
+   user = {username,email,display,bio,passHash}
+ - current user stored in 'bb_current'
+ - chats stored in 'bb_chats_{username}' as array of conversations
+   conv = {id,title,messages: [{role:'user'|'bot', content, ts}]}
+ - settings stored in 'bb_settings' (theme, backendUrl)
+*/
 
-async function sendMessage() {
-  const message = userInput.value.trim();
-  if (!message) return;
+const app = {
+  el: document.getElementById('app'),
+  views: {
+    chat: document.getElementById('view-chat'),
+    about: document.getElementById('view-about'),
+    signup: document.getElementById('view-signup'),
+    signin: document.getElementById('view-signin'),
+    settings: document.getElementById('view-settings'),
+  },
+  navLinks: document.querySelectorAll('.nav a'),
+  currentView: 'chat',
+  usersKey: 'bb_users',
+  currentKey: 'bb_current',
+  settingsKey: 'bb_settings',
+  convListEl: document.getElementById('convs'),
+  conversations: [],
+  activeConvId: null,
+  chatBoxEl: document.getElementById('chatBox'),
+  backendUrlEl: document.getElementById('backendUrl'),
+  backendDisplay: document.getElementById('backendUrlDisplay'),
+  themeToggleBtn: document.getElementById('themeToggle'),
+};
 
-  appendMessage("user", message);
-  userInput.value = "";
+// --- Utilities ---
+function saveSetting(obj) {
+  localStorage.setItem(app.settingsKey, JSON.stringify(obj || {}));
+}
+function loadSetting() {
+  const s = localStorage.getItem(app.settingsKey);
+  return s ? JSON.parse(s) : { theme: 'dark', backendUrl: '' };
+}
 
-  const thinkingMsg = appendMessage("bot", "...");
-  
-  try {
-    const res = await fetch("http://localhost:3000/chat", { // 👈 talks to your Node proxy
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ messages: [{ role: "user", content: message }] }),
-    });
+function saveUsers(users){
+  localStorage.setItem(app.usersKey, JSON.stringify(users || []));
+}
+function loadUsers(){
+  const s = localStorage.getItem(app.usersKey);
+  return s ? JSON.parse(s) : [];
+}
+function setCurrentUser(username){
+  if(username) localStorage.setItem(app.currentKey, username);
+  else localStorage.removeItem(app.currentKey);
+  updateUserMini();
+}
+function getCurrentUser(){ return localStorage.getItem(app.currentKey); }
 
-    const data = await res.json();
-    chatBox.removeChild(thinkingMsg);
-    const reply = data.choices?.[0]?.message?.content?.trim() || "Sorry, I didn’t get that.";
-    appendMessage("bot", reply);
-  } catch (err) {
-    chatBox.removeChild(thinkingMsg);
-    appendMessage("bot", "⚠️ Error: Unable to connect to server.");
-    console.error(err);
+function chatsKeyFor(user){ return `bb_chats_${user}`; }
+function saveChatsFor(user,chats){ localStorage.setItem(chatsKeyFor(user), JSON.stringify(chats||[])); }
+function loadChatsFor(user){ const s = localStorage.getItem(chatsKeyFor(user)); return s? JSON.parse(s): []; }
+
+function uid(prefix='id'){ return prefix + '_' + Math.random().toString(36).slice(2,9); }
+function now(){ return new Date().toISOString(); }
+
+// SHA-256 hashing for password (browser crypto)
+async function sha256Hex(str){
+  const utf8 = new TextEncoder().encode(str);
+  const hash = await crypto.subtle.digest('SHA-256', utf8);
+  const arr = Array.from(new Uint8Array(hash));
+  return arr.map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+// --- Routing ---
+function navigateTo(route){
+  // route is 'chat','about','signup'...
+  app.currentView = route;
+  for(const a of app.navLinks) a.classList.toggle('active', a.dataset.route === route);
+  for(const [k,v] of Object.entries(app.views)) v.classList.toggle('active', k === route);
+  document.getElementById('pageTitle').textContent = route.charAt(0).toUpperCase()+route.slice(1);
+  // update view specific
+  if(route==='chat') loadConversations();
+  if(route==='signin'){ document.getElementById('signinMsg').textContent=''; }
+  if(route==='signup'){ document.getElementById('signupMsg').textContent=''; }
+  window.location.hash = '#/' + route;
+}
+
+window.addEventListener('hashchange', ()=> {
+  const h = location.hash.replace('#/','') || 'chat';
+  navigateTo(h);
+});
+
+// --- UI updates ---
+function updateUserMini(){
+  const u = getCurrentUser();
+  const miniName = document.getElementById('miniName');
+  const miniEmail = document.getElementById('miniEmail');
+  const avatarInitial = document.getElementById('avatarInitial');
+  if(!u){ miniName.textContent='Not signed in'; miniEmail.textContent=''; avatarInitial.textContent='U'; }
+  else {
+    const users = loadUsers();
+    const me = users.find(x=>x.username===u);
+    if(me){ miniName.textContent = me.display || me.username; miniEmail.textContent = me.email || ''; avatarInitial.textContent = (me.display||me.username).slice(0,1).toUpperCase(); }
+    else { setCurrentUser(null); updateUserMini(); }
   }
 }
 
-function appendMessage(sender, text) {
-  const msgDiv = document.createElement("div");
-  msgDiv.className = `msg ${sender}`;
-  const msgContent = document.createElement("div");
-  msgContent.className = "msg-content";
+// --- Conversations ---
+function loadConversations(){
+  const user = getCurrentUser();
+  if(!user){
+    app.conversations = [];
+    app.activeConvId = null;
+    renderConvs();
+    renderChat();
+    return;
+  }
+  app.conversations = loadChatsFor(user);
+  if(!app.conversations || app.conversations.length===0){
+    // seed one
+    const c = { id: uid('conv'), title: 'New conversation', messages: [{role:'bot',content:'Hi! I am BlueBot — ask me anything.',ts:now()}] };
+    app.conversations = [c];
+    saveChatsFor(user,app.conversations);
+  }
+  if(!app.activeConvId) app.activeConvId = app.conversations[0].id;
+  renderConvs();
+  renderChat();
+}
+function renderConvs(){
+  app.convListEl.innerHTML='';
+  for(const c of app.conversations){
+    const el = document.createElement('div');
+    el.className = 'conv-item' + (c.id===app.activeConvId ? ' active' : '');
+    el.textContent = c.title || (c.messages[0] ? c.messages[0].content.slice(0,40) : 'Conversation');
+    el.onclick = ()=> { app.activeConvId = c.id; renderConvs(); renderChat(); };
+    app.convListEl.appendChild(el);
+  }
+}
+function createNewConv(){
+  const u = getCurrentUser();
+  if(!u){ alert('Sign in to create conversations'); return; }
+  const c = { id: uid('conv'), title: 'New conversation', messages: [{role:'bot',content:'New conversation started. How can I help?',ts:now()}] };
+  app.conversations.unshift(c);
+  app.activeConvId = c.id;
+  saveChatsFor(u,app.conversations);
+  renderConvs(); renderChat();
+}
+function saveActiveConversations(){
+  const u = getCurrentUser(); if(!u) return;
+  saveChatsFor(u,app.conversations);
+}
+function findActiveConv(){ return app.conversations.find(c=>c.id===app.activeConvId); }
 
-  if (text.includes("```")) {
-    const parts = text.split(/```/);
-    parts.forEach((part, i) => {
-      if (i % 2 === 1) {
-        const pre = document.createElement("pre");
-        const code = document.createElement("code");
-        code.textContent = part.replace(/^[a-zA-Z]*\n/, "");
-        pre.appendChild(code);
-        msgContent.appendChild(pre);
-      } else if (part.trim()) {
-        const p = document.createElement("p");
-        p.textContent = part.trim();
-        msgContent.appendChild(p);
+// --- Render chat ---
+function renderChat(){
+  app.chatBoxEl.innerHTML='';
+  const conv = findActiveConv();
+  document.getElementById('activeConvTitle').textContent = conv ? (conv.title || 'Conversation') : 'No conversation';
+  if(!conv) return;
+  for(const m of conv.messages){
+    const row = document.createElement('div');
+    row.className = 'msg ' + (m.role==='user' ? 'user' : 'bot');
+
+    if(m.role==='bot'){
+      const img = document.createElement('img');
+      img.src = 'https://static.vecteezy.com/system/resources/thumbnails/050/700/554/small_2x/chatbot-icon-concept-chat-bot-or-chatterbot-robot-virtual-assistance-of-website-or-mobile-applications-illustration-png.png';
+      row.appendChild(img);
+    }
+
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble';
+
+    // detect code blocks
+    if(typeof m.content === 'string' && m.content.includes('```')){
+      const parts = m.content.split(/```/);
+      for(let i=0;i<parts.length;i++){
+        if(i%2===1){
+          // code
+          const pre = document.createElement('pre');
+          pre.className='code';
+          pre.textContent = parts[i].replace(/^[\w-]+\n/,'');
+          bubble.appendChild(pre);
+        } else {
+          if(parts[i].trim()){
+            const p = document.createElement('div');
+            p.textContent = parts[i].trim();
+            bubble.appendChild(p);
+          }
+        }
       }
-    });
-  } else {
-    msgContent.textContent = text;
-  }
+    } else {
+      bubble.textContent = m.content;
+    }
 
-  if (sender === "bot") {
-    const botImg = document.createElement("img");
-    botImg.src = "https://static.vecteezy.com/system/resources/thumbnails/050/700/554/small_2x/chatbot-icon-concept-chat-bot-or-chatterbot-robot-virtual-assistance-of-website-or-mobile-applications-illustration-png.png";
-    botImg.alt = "Bot";
-    msgDiv.appendChild(botImg);
+    row.appendChild(bubble);
+    app.chatBoxEl.appendChild(row);
   }
-
-  msgDiv.appendChild(msgContent);
-  chatBox.appendChild(msgDiv);
   scrollToBottom();
-  return msgDiv;
 }
 
-function scrollToBottom() { chatBox.scrollTop = chatBox.scrollHeight; }
-function scrollToTop() { chatBox.scrollTop = 0; }
+// scrolling
+function scrollToBottom(){ app.chatBoxEl.scrollTop = app.chatBoxEl.scrollHeight; }
+function scrollToTop(){ app.chatBoxEl.scrollTop = 0; }
 
-sendBtn.addEventListener("click", sendMessage);
-userInput.addEventListener("keypress", (e) => { if (e.key === "Enter") sendMessage(); });
+// --- Chat sending and backend ---
+async function sendUserMessage(){
+  const text = document.getElementById('userInput').value.trim();
+  if(!text) return;
+  const conv = findActiveConv();
+  if(!conv){ alert('No active conversation'); return; }
+  conv.messages.push({role:'user',content:text,ts:now()});
+  renderChat(); document.getElementById('userInput').value='';
+  saveActiveConversations();
+
+  // show typing placeholder
+  const typing = {role:'bot',content:'',ts:now(),_typing:true};
+  conv.messages.push(typing);
+  renderChat(); scrollToBottom();
+
+  // send message to backend if configured
+  const settings = loadSetting();
+  if(settings.backendUrl){
+    try{
+      const payload = { messages: conv.messages.filter(m=>!m._typing).map(m => ({ role: m.role, content: m.content })) };
+      // call backend
+      const resp = await fetch(settings.backendUrl, {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await resp.json();
+      // expected OpenAI-style response: data.choices[0].message.content
+      const reply = data?.choices?.[0]?.message?.content || 'No reply from backend';
+      // remove typing
+      const idx = conv.messages.indexOf(typing);
+      if(idx>=0) conv.messages.splice(idx,1);
+      conv.messages.push({role:'bot',content:reply,ts:now()});
+      saveActiveConversations();
+      renderChat();
+    } catch(err){
+      // failure -> remove typing and append error
+      const idx = conv.messages.indexOf(typing);
+      if(idx>=0) conv.messages.splice(idx,1);
+      conv.messages.push({role:'bot',content:'⚠️ Error contacting backend. See Settings.',ts:now()});
+      saveActiveConversations();
+      renderChat();
+      console.error(err);
+    }
+    return;
+  }
+
+  // Fallback local "simulated" response with typing animation and code example detection.
+  await simulateLocalReply(conv, typing);
+  saveActiveConversations();
+}
+
+// Simulated local "AI" reply (for offline/demo)
+async function simulateLocalReply(conv, typingRecord){
+  function sleep(ms){ return new Promise(res=>setTimeout(res,ms)); }
+  // small faux typing effect: replace typing with slowly revealed text
+  const userLast = conv.messages.filter(m=>m.role==='user').slice(-1)[0];
+  const userText = userLast ? userLast.content : '';
+  // Example: if user asks for "code" include a code block
+  let reply = "I can’t talk to OpenAI until you configure a backend. Meanwhile, here’s a demo reply.";
+  if(/code|javascript|python|example/i.test(userText)){
+    reply = "Here’s a quick JavaScript example:\n\n```javascript\nfunction greet(name){\n  return `Hello, ${name}!`;\n}\nconsole.log(greet('World'));\n```";
+  } else if(/hello|hi|hey/i.test(userText)){
+    reply = "Hey! I’m BlueBot — ask me for code examples, explanations, or help with ideas.";
+  } else {
+    reply = `You said: "${userText}". This is a local demo reply. To get real AI answers, set the backend URL in Settings.`;
+  }
+
+  // type the reply into conv.messages (simulate incremental typing)
+  const idx = conv.messages.indexOf(typingRecord);
+  if(idx<0) return;
+  // remove typing placeholder
+  conv.messages.splice(idx,1);
+  // add empty bot message then fill it
+  const botMsg = { role:'bot', content:'', ts:now() };
+  conv.messages.push(botMsg);
+  renderChat();
+  const full = reply;
+  for(let i=0;i<full.length;i++){
+    botMsg.content = full.slice(0,i+1);
+    renderChat();
+    scrollToBottom();
+    await sleep(8 + Math.random()*18);
+  }
+}
+
+// --- Sign up / Sign in ---
+document.getElementById('signupBtn').addEventListener('click', async ()=>{
+  const username = document.getElementById('su_username').value.trim();
+  const email = document.getElementById('su_email').value.trim();
+  const display = document.getElementById('su_display').value.trim() || username;
+  const pass = document.getElementById('su_password').value;
+  const pass2 = document.getElementById('su_password2').value;
+  const bio = document.getElementById('su_bio').value.trim();
+  const msgEl = document.getElementById('signupMsg');
+  msgEl.textContent='';
+
+  if(!username || !email || !pass || !pass2){ msgEl.textContent='Please fill all required fields.'; return; }
+  if(pass !== pass2){ msgEl.textContent='Passwords do not match.'; return; }
+  if(username.length<3){ msgEl.textContent='Username must be at least 3 chars.'; return; }
+
+  const users = loadUsers();
+  if(users.some(u=>u.username.toLowerCase()===username.toLowerCase())){ msgEl.textContent='Username taken.'; return; }
+  if(users.some(u=>u.email.toLowerCase()===email.toLowerCase())){ msgEl.textContent='An account with that email exists.'; return; }
+
+  const passHash = await sha256Hex(pass);
+  users.push({ username, email, display, bio, passHash });
+  saveUsers(users);
+  setCurrentUser(username);
+  // seed chats
+  saveChatsFor(username, [{ id: uid('conv'), title: 'Welcome', messages: [{role:'bot',content:'Welcome! Your account is ready. Start a new conversation.',ts:now()}] }]);
+  updateUserMini();
+  document.getElementById('signupMsg').textContent = 'Account created — you are signed in.';
+  navigateTo('chat');
+});
+
+document.getElementById('signinBtn').addEventListener('click', async ()=>{
+  const identifier = document.getElementById('si_user').value.trim();
+  const pass = document.getElementById('si_pass').value;
+  const msgEl = document.getElementById('signinMsg');
+  msgEl.textContent='';
+  if(!identifier || !pass){ msgEl.textContent='Enter username/email and password.'; return; }
+  const users = loadUsers();
+  const user = users.find(u => u.username.toLowerCase()===identifier.toLowerCase() || u.email.toLowerCase()===identifier.toLowerCase());
+  if(!user){ msgEl.textContent='User not found.'; return; }
+  const hash = await sha256Hex(pass);
+  if(hash !== user.passHash){ msgEl.textContent='Incorrect password.'; return; }
+  setCurrentUser(user.username);
+  updateUserMini();
+  msgEl.textContent = 'Signed in.';
+  navigateTo('chat');
+});
+
+document.getElementById('toSignin').addEventListener('click',()=> navigateTo('signin'));
+document.getElementById('toSignup').addEventListener('click',()=> navigateTo('signup'));
+document.getElementById('newConvBtn').addEventListener('click', ()=> createNewConv());
+
+// send message
+document.getElementById('sendBtn').addEventListener('click', ()=> {
+  if(!getCurrentUser()){ alert('Please sign in to chat. Use Sign Up to create an account.'); navigateTo('signin'); return; }
+  sendUserMessage();
+});
+document.getElementById('userInput').addEventListener('keypress', (e)=> { if(e.key==='Enter') document.getElementById('sendBtn').click(); });
+
+// settings
+document.getElementById('setLight').addEventListener('click', ()=> { setTheme('light'); });
+document.getElementById('setDark').addEventListener('click', ()=> { setTheme('dark'); });
+document.getElementById('clearAll').addEventListener('click', ()=> {
+  if(confirm('Clear all local data (users, chats, settings)?')){ localStorage.clear(); location.reload(); }
+});
+document.getElementById('exportData').addEventListener('click', ()=> {
+  const data = { users: loadUsers(), settings: loadSetting() };
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download='bluebot_export.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+document.getElementById('backendUrl').addEventListener('change', ()=> { updateBackendUrl(); });
+document.getElementById('themeToggle').addEventListener('click', ()=> toggleTheme());
+
+function updateBackendUrl(){
+  const v = document.getElementById('backendUrl').value.trim();
+  const s = loadSetting(); s.backendUrl = v; saveSetting(s); app.backendDisplay.textContent = v || '(not configured)';
+}
+function applySettings(){
+  const s = loadSetting();
+  document.getElementById('backendUrl').value = s.backendUrl || '';
+  app.backendDisplay.textContent = s.backendUrl || '(not configured)';
+  setTheme(s.theme || 'dark', false);
+}
+function setTheme(t, persist=true){
+  app.el.setAttribute('data-theme', t);
+  if(persist){ const s = loadSetting(); s.theme = t; saveSetting(s); }
+}
+function toggleTheme(){ const cur = app.el.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'; setTheme(cur); }
+
+// init nav links
+for(const a of app.navLinks){
+  a.addEventListener('click', (e)=>{
+    e.preventDefault();
+    const route = a.dataset.route;
+    navigateTo(route);
+  });
+}
+
+// initial state
+(function init(){
+  // load settings & theme
+  applySettings();
+  // update user mini
+  updateUserMini();
+  // load hash
+  const h = location.hash.replace('#/','') || 'chat';
+  navigateTo(h);
+
+  // set default user for demo if none (optional commented)
+  // if(!getCurrentUser() && loadUsers().length===0){ // create demo account
+  // }
+
+  // load conversations (for signed-in user)
+  loadConversations();
+})();
+
 </script>
 </body>
 </html>
