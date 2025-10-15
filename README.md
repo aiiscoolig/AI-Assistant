@@ -1,4 +1,4 @@
-### AI Chatbot Description ###
+# AI Chatbot Description 
 
 Meet your personal AI assistant — a smart, friendly chatbot designed to help you with anything from answering questions to generating creative ideas.
 Built using OpenAI’s GPT technology, this bot can understand natural language, hold smooth conversations, and even format responses with modern, code-styled blocks.
